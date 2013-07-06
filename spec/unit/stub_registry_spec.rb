@@ -9,6 +9,15 @@ describe WebMock::StubRegistry do
     @request_stub = WebMock::RequestStub.new(:get, "www.example.com")
   end
 
+  describe "remove_request_stub" do
+    it "should remove stub from registry" do
+      WebMock::StubRegistry.instance.register_request_stub(@request_stub)
+      WebMock::StubRegistry.instance.registered_request?(@request_signature).should == @request_stub
+      WebMock::StubRegistry.instance.remove_request_stub(@request_stub)
+      WebMock::StubRegistry.instance.registered_request?(@request_signature).should == nil
+    end
+  end
+
   describe "reset!" do
     before(:each) do
       WebMock::StubRegistry.instance.register_request_stub(@request_stub)
@@ -55,7 +64,15 @@ describe WebMock::StubRegistry do
       response1.should == WebMock::Response.new(:body => "get")
     end
 
-    it "should report clone of theresponse" do
+    it "should report clone of the response" do
+      @request_stub.to_return(:body => lambda{|r| r.method.to_s})
+      WebMock::StubRegistry.instance.register_request_stub(@request_stub)
+      response1 = WebMock::StubRegistry.instance.response_for_request(@request_signature)
+      response2 = WebMock::StubRegistry.instance.response_for_request(@request_signature)
+      response1.should_not be(response2)
+    end
+
+    it "should report clone of the dynamic response" do
       @request_stub.to_return {|request| {:body => request.method.to_s} }
       WebMock::StubRegistry.instance.register_request_stub(@request_stub)
       response1 = WebMock::StubRegistry.instance.response_for_request(@request_signature)

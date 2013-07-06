@@ -1,5 +1,166 @@
 # Changelog
 
+## 1.13.0
+
+* Net::HTTP::Persistent compatibility.
+  WebMock doesn't disconnect previously started connections upon a request anymore.
+
+
+## 1.12.3
+
+* Fixed issue with handling Addressable::URI with query params passed to `Net::HTTP.get_response`
+
+  Thanks to [Leif Bladt](https://github.com/leifbladt)
+
+* Fixed HTTPClient adapter to not raise an error if a request with multipart body is executed.
+
+## 1.12.2
+
+* Fixed issue with handling request.path when Addressable::URI is passed to #request instead of URI with Ruby 2.0.
+
+  Thanks to [Leif Bladt](https://github.com/leifbladt)
+
+* Accept integers as query param values in request stubs
+
+  i.e. `stub_request(:get, /.*/).with(:query => {"a" => 1})`
+
+  Thanks to [Mitsutaka Mimura](https://github.com/takkanm)
+
+## 1.12.1
+
+* Fixed Minitest < 5.0 compatibility
+
+  Thanks to [Alex Tomlins](https://github.com/alext) for reporting the issue.
+
+## 1.12.0
+
+* Not using Gem spec anymore to check loaded Curb version.
+
+* `WebMock.disable_net_connect!` now accepts array of regexps as allow param:
+
+  i.e. `WebMock.disable_net_connect!(:allow => [/google.com/, /yahoo.com/])`
+
+  Thanks to [Bastien Vaucher](https://github.com/bastien)
+
+* Fixed `on_header` Curb callback behaviour in Curb adapter
+
+  Thanks to [Joel Chippindale](https://github.com/mocoso)
+
+* Fixed aws-sdk compatibility with Ruby 2.0, by supporting `continue_timeout` accessor on Net::HTTP socket.
+
+   Thanks to [Lin Jen-Shin](https://github.com/godfat)
+
+* Fixed WebMock::Server to not give "log writing failed. can't be called from trap context" warning with Ruby 2.0
+
+   Thanks to [Murahashi Sanemat Kenichi](https://github.com/sanemat)
+
+* Added support for EM-HTTP-Request streaming data off disk feature.
+
+   Thanks to [Lin Jen-Shin](https://github.com/godfat)
+
+* Added compatibility with Minitest 5
+
+   Thanks to [Tim Kurvers](https://github.com/timkurvers)
+
+* Excon >= 0.22 compatibility.
+
+* README has nice sytnax hightlighting and fixed code styling!
+
+   Thanks to [Ilya Vassilevsky](https://github.com/vassilevsky)
+
+* Compatibility with Rails 4 `rack.session.options`
+
+   Thanks to [gotwalt](https://github.com/gotwalt)
+
+## 1.11.0
+
+* Excon >= 0.17 support.
+
+  Thanks to [Nathan Sutton](https://github.com/nate) for reporting this issue and to [Wesley Beary](https://github.com/geemus) and [Myron Marston](https://github.com/myronmarston) for help.
+
+## 1.10.2
+
+* '+' in request path is treated as plus, but in query params always as a space.
+
+## 1.10.1
+
+* '+' in request body is still treated as a space. This fixes a bug introduced in previous version.
+
+  Thanks to [Erik Michaels-Ober](https://github.com/sferik) for reporting this problem.
+
+* Fixed issue: response body declared as Proc was not evaluated again on subsequent requests.
+
+  Thanks to [Rick Fletcher](https://github.com/rfletcher) for reporting this issue.
+
+## 1.10.0
+
+* '+' in query params is not treated as space anymore and is encoded as %2B
+
+  Thanks to [goblin](https://github.com/goblin) for reporting this issue.
+
+* added `remove_request_stub` method to the api to allow removing unused stubs i.e.
+
+        stub_get = stub_request(:get, "www.example.com")
+        remove_request_stub(stub_get)
+
+* `assert_requested` and `assert_not_requested` raise an error if a stub object is provided together with a block.
+
+## 1.9.3
+
+* Fixed issue with unavailable constant Mutex in Ruby < 1.9
+
+  Thanks to [Lucas Dohmen](https://github.com/moonglum) for reporting this issue.
+
+## 1.9.2
+
+* Added support for Excon's :response_block parameter
+
+  Thanks to [Myron Marston](https://github.com/myronmarston) for reporting this issue.
+
+## 1.9.1
+
+* Fix 'rack.errors' not being set for Rack apps
+
+  Thanks to [Alex Grant](https://github.com/grantovich)
+
+* Added support for minitest assertions count
+
+  Thanks to [Mokevnin Kirill](https://github.com/mokevnin)
+
+* Fixed issues with registering http requests in multi-threaded environments
+
+  Thanks to [Tom Beauvais](https://github.com/tbeauvais)
+
+* Bumped Crack version to >=0.3.2
+
+  Thanks to [Jake Benilov](https://github.com/benilovj)
+
+* Fixed issues in Typhoeus 0.6. Defaulted method to GET when no method specified.
+
+  Thanks to [Hans Hasselberg](https://github.com/i0rek)
+
+* Add license information to the gemspec
+
+  Thanks to [Jordi Massaguer Pla](https://github.com/jordimassaguerpla) and [Murahashi Sanemat Kenichi](https://github.com/sanemat)
+
+* Added support for :expects option in Excon adapter
+
+  Thanks to [Evgeniy Dolzhenko](https://github.com/dolzenko)
+
+* Fixed Faye compatibility by treating StringIO in Net::HTTP adapter properly
+
+  Thanks to [Pavel Forkert](https://github.com/fxposter)
+
+* Updated VCR link
+
+  Thanks to [Rex Feng](https://github.com/xta)
+
+## 1.9.0
+
+* Added support for Typhoeus >= 0.5.0 and removed support for Typhoeus < 0.5.0.
+
+  Thanks to [Hans Hasselberg](https://github.com/i0rek)
+
 ## 1.8.11
 
 * Fix excon adapter to handle `:body => some_file_object`

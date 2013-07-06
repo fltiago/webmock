@@ -44,10 +44,12 @@ module WebMock
 
       # Rack-specific variables
       env['rack.input']      = StringIO.new(body)
+      env['rack.errors']     = $stderr
       env['rack.version']    = Rack::VERSION
       env['rack.url_scheme'] = uri.scheme
       env['rack.run_once']   = true
       env['rack.session']    = session
+      env['rack.session.options'] = session_options
 
       headers.each do |k, v|
         env["HTTP_#{k.tr('-','_').upcase}"] = v
@@ -58,6 +60,10 @@ module WebMock
 
     def session
       @session ||= {}
+    end
+
+    def session_options
+      @session_options ||= {}
     end
   end
 end

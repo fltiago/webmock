@@ -11,11 +11,12 @@ Gem::Specification.new do |s|
   s.homepage    = 'http://github.com/bblimke/webmock'
   s.summary     = %q{Library for stubbing HTTP requests in Ruby.}
   s.description = %q{WebMock allows stubbing HTTP requests and setting expectations on HTTP requests.}
+  s.license     = "MIT"
 
   s.rubyforge_project = 'webmock'
 
   s.add_dependency 'addressable', '>= 2.2.7'
-  s.add_dependency 'crack', '>=0.1.7'
+  s.add_dependency 'crack', '>=0.3.2'
 
   s.add_development_dependency 'rspec',           '~> 2.10'
   s.add_development_dependency 'httpclient',      '>= 2.2.4'
@@ -23,9 +24,9 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'em-http-request', '>= 1.0.2'
   s.add_development_dependency 'em-synchrony',    '>= 1.0.0' if RUBY_VERSION >= "1.9"
   s.add_development_dependency 'curb',            '>= 0.8.0' unless RUBY_PLATFORM =~ /java/
-  s.add_development_dependency 'typhoeus',        '>= 0.3.3' unless RUBY_PLATFORM =~ /java/
-  s.add_development_dependency 'excon',           '>= 0.11.0'
-  s.add_development_dependency 'minitest',        '>= 2.2.2'
+  s.add_development_dependency 'typhoeus',        '>= 0.5.0' unless RUBY_PLATFORM =~ /java/
+  s.add_development_dependency 'excon',           '>= 0.22.0'
+  s.add_development_dependency 'minitest',        '~> 5.0.0'
   s.add_development_dependency 'rdoc',            ((RUBY_VERSION == '1.8.6') ? '<= 3.5.0' : '>3.5.0')
 
   s.files         = `git ls-files`.split("\n")

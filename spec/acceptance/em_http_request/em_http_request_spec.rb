@@ -13,7 +13,7 @@ unless RUBY_PLATFORM =~ /java/
 
     #functionality only supported for em-http-request 1.x
     if defined?(EventMachine::HttpConnection)
-      context 'when a real request is made and redirects are followed' do
+      context 'when a real request is made and redirects are followed', :net_connect => true do
         before { WebMock.allow_net_connect! }
 
         # This url redirects to the https URL.
@@ -116,7 +116,7 @@ unless RUBY_PLATFORM =~ /java/
           end
         end
 
-        context 'making a real request' do
+        context 'making a real request', :net_connect => true do
           before { WebMock.allow_net_connect! }
           include_examples "em-http-request middleware/after_request hook integration"
         end
@@ -197,6 +197,13 @@ unless RUBY_PLATFORM =~ /java/
     it "should work when the body is passed as a Hash" do
       stub_request(:post, "www.example.com").with(:body => {:a => "1", :b => "2"}).to_return(:body => "ok")
       http_request(:post, "http://www.example.com", :body => {:a => "1", :b => "2"}).body.should == "ok"
+    end
+
+    if defined?(EventMachine::HttpConnection)
+      it "should work when a file is passed as body" do
+        stub_request(:post, "www.example.com").with(:body => File.read(__FILE__)).to_return(:body => "ok")
+        http_request(:post, "http://www.example.com", :file => __FILE__).body.should == "ok"
+      end
     end
 
     it "should work with UTF-8 strings" do

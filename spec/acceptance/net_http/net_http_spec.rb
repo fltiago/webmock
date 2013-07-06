@@ -158,6 +158,11 @@ describe "Net:HTTP" do
     WebMock::RequestRegistry.instance.requested_signatures.hash.values.first.should == 1
   end
 
+  it "should work with Addressable::URI passed to Net::HTTP.get_response" do
+    stub_request(:get, 'http://www.example.com/hello?a=1').to_return(:body => "abc")
+    Net::HTTP.get_response(Addressable::URI.parse('http://www.example.com/hello?a=1')).body.should == "abc"
+  end
+
   describe "connecting on Net::HTTP.start" do
     before(:each) do
       @http = Net::HTTP.new('www.google.com', 443)
@@ -200,6 +205,11 @@ describe "Net:HTTP" do
 
       it "should connect to the server if the URI matches an regex", :net_connect => true do
         WebMock.disable_net_connect!(:allow => /google.com/)
+        response = Net::HTTP.get('www.google.com','/')
+      end
+
+      it "should connect to the server if the URI matches any regex the array", :net_connect => true do
+        WebMock.disable_net_connect!(:allow => [/google.com/, /yahoo.com/])
         response = Net::HTTP.get('www.google.com','/')
       end
 

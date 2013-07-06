@@ -1,3 +1,5 @@
+require 'thread'
+
 module WebMock
   module Util
     class Util::HashCounter
@@ -6,13 +8,18 @@ module WebMock
         self.hash = {}
         @order = {}
         @max = 0
+        @lock = ::Mutex.new
       end
       def put key, num=1
-        hash[key] = (hash[key] || 0) + num
-        @order[key] = @max = @max + 1
+        @lock.synchronize do
+          hash[key] = (hash[key] || 0) + num
+          @order[key] = @max = @max + 1
+        end
       end
       def get key
-        hash[key] || 0
+        @lock.synchronize do
+          hash[key] || 0
+        end
       end
 
       def each(&block)

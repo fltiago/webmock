@@ -36,6 +36,12 @@ module WebMock
       stub
     end
 
+    def remove_request_stub(stub)
+      if not request_stubs.delete(stub)
+        raise "Request stub \n\n #{stub.to_s} \n\n is not registered."
+      end
+    end
+
     def registered_request?(request_signature)
       request_stub_for(request_signature)
     end
@@ -54,7 +60,7 @@ module WebMock
     end
 
     def evaluate_response_for_request(response, request_signature)
-      response.evaluate(request_signature)
+      response.dup.evaluate(request_signature)
     end
 
   end

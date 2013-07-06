@@ -5,24 +5,77 @@ rescue LoadError
 end
 
 if defined?(Excon)
-  WebMock::VersionChecker.new('Excon', Excon::VERSION, '0.9.6').check_version!
+  WebMock::VersionChecker.new('Excon', Excon::VERSION, '0.22.0').check_version!
 
   module WebMock
     module HttpLibAdapters
 
       class ExconAdapter < HttpLibAdapter
+        PARAMS_TO_DELETE = [:expects, :idempotent,
+                            :instrumentor_name, :instrumentor,
+                            :response_block, :request_block,
+                            :__construction_args, :stack,
+                            :connection, :response]
+
         adapter_for :excon
 
         def self.enable!
-          Excon.send(:remove_const, :Connection)
-          Excon.send(:const_set, :Connection, ExconConnection)
+          self.add_excon_stub
         end
 
         def self.disable!
-          Excon.send(:remove_const, :Connection)
-          Excon.send(:const_set, :Connection, ExconConnection.superclass)
+          self.remove_excon_stub
         end
 
+        def self.add_excon_stub
+          if not @stub
+            @original_excon_mock_default = ::Excon.defaults[:mock]
+            ::Excon.defaults[:mock] = true
+            @stub = ::Excon.stub({}) do |params|
+              self.handle_request(params)
+            end
+          end
+        end
+
+        def self.remove_excon_stub
+          ::Excon.defaults[:mock] = @original_excon_mock_default
+          @original_excon_mock_default = nil
+          Excon.stubs.delete(@stub)
+          @stub = nil
+        end
+
+        def self.handle_request(params)
+          mock_request  = self.build_request params.dup
+          WebMock::RequestRegistry.instance.requested_signatures.put(mock_request)
+
+          if mock_response = WebMock::StubRegistry.instance.response_for_request(mock_request)
+            self.perform_callbacks(mock_request, mock_response, :real_request => false)
+            response = self.real_response(mock_response)
+            response
+          elsif WebMock.net_connect_allowed?(mock_request.uri)
+            conn = new_excon_connection(params)
+            real_response = conn.request(scrub_params_from(params.merge(:mock => false)))
+
+            ExconAdapter.perform_callbacks(mock_request, ExconAdapter.mock_response(real_response), :real_request => true)
+
+            real_response.data
+          else
+            raise WebMock::NetConnectNotAllowedError.new(mock_request)
+          end
+        end
+
+        def self.new_excon_connection(params)
+          # Ensure the connection is constructed with the exact same args
+          # that the orginal connection was constructed with.
+          args = params.fetch(:__construction_args)
+          ::Excon::Connection.new(scrub_params_from args.merge(:mock => false))
+        end
+
+        def self.scrub_params_from(hash)
+          hash = hash.dup
+          PARAMS_TO_DELETE.each { |key| hash.delete(key) }
+          hash
+        end
 
         def self.to_query(hash)
           string = ""
@@ -58,17 +111,18 @@ if defined?(Excon)
         def self.real_response(mock)
           raise Excon::Errors::Timeout if mock.should_timeout
           mock.raise_error_if_any
-          Excon::Response.new \
+          {
             :body    => mock.body,
             :status  => mock.status[0].to_i,
-            :headers => mock.headers
+            :headers => mock.headers || {}
+          }
         end
 
         def self.mock_response(real)
           mock = WebMock::Response.new
           mock.status  = real.status
           mock.headers = real.headers
-          mock.body    = real.body
+          mock.body    = real.body.dup
           mock
         end
 
@@ -76,29 +130,15 @@ if defined?(Excon)
           return unless WebMock::CallbackRegistry.any_callbacks?
           WebMock::CallbackRegistry.invoke_callbacks(options.merge(:lib => :excon), request, response)
         end
-
-      end
-
-      class ExconConnection < ::Excon::Connection
-
-        def request_kernel(params, &block)
-          mock_request  = ExconAdapter.build_request params.dup
-          WebMock::RequestRegistry.instance.requested_signatures.put(mock_request)
-
-          if mock_response = WebMock::StubRegistry.instance.response_for_request(mock_request)
-            ExconAdapter.perform_callbacks(mock_request, mock_response, :real_request => false)
-            ExconAdapter.real_response(mock_response)
-          elsif WebMock.net_connect_allowed?(mock_request.uri)
-            real_response = super
-            ExconAdapter.perform_callbacks(mock_request, ExconAdapter.mock_response(real_response), :real_request => true)
-            real_response
-          else
-            raise WebMock::NetConnectNotAllowedError.new(mock_request)
-          end
-        end
-
       end
     end
   end
 
+  Excon::Connection.class_eval do
+    def self.new(args)
+      super.tap do |instance|
+        instance.data[:__construction_args] = args
+      end
+    end
+  end
 end

@@ -2,25 +2,42 @@ shared_examples_for "stubbing requests" do |*adapter_info|
   describe "when requests are stubbed" do
     describe "based on uri" do
       it "should return stubbed response even if request have escaped parameters" do
-        stub_request(:get, "www.example.com/hello/?#{NOT_ESCAPED_PARAMS}").to_return(:body => "abc")
-        http_request(:get, "http://www.example.com/hello/?#{ESCAPED_PARAMS}").body.should == "abc"
+        stub_request(:get, "www.example.com/hello+/?#{NOT_ESCAPED_PARAMS}").to_return(:body => "abc")
+        http_request(:get, "http://www.example.com/hello%2B/?#{ESCAPED_PARAMS}").body.should == "abc"
+      end
+
+      it "should return stubbed response even if query params have integer values" do
+        stub_request(:get, "www.example.com").with(:query => {"a" => 1}).to_return(:body => "abc")
+        http_request(:get, "http://www.example.com/?a=1").body.should == "abc"
       end
 
       it "should return stubbed response even if request has non escaped params" do
-        stub_request(:get, "www.example.com/hello/?#{ESCAPED_PARAMS}").to_return(:body => "abc")
-        http_request(:get, "http://www.example.com/hello/?#{NOT_ESCAPED_PARAMS}").body.should == "abc"
+        stub_request(:get, "www.example.com/hello%2B/?#{ESCAPED_PARAMS}").to_return(:body => "abc")
+        http_request(:get, "http://www.example.com/hello+/?#{NOT_ESCAPED_PARAMS}").body.should == "abc"
       end
 
       it "should return stubbed response even if stub uri is declared as regexp and request params are escaped" do
         stub_request(:get, /.*x=ab c.*/).to_return(:body => "abc")
         http_request(:get, "http://www.example.com/hello/?#{ESCAPED_PARAMS}").body.should == "abc"
       end
+
+      it "should raise error specifying stubbing instructions with escaped characters in params if there is no matching stub" do
+        begin
+          http_request(:get, "http://www.example.com/hello+/?#{NOT_ESCAPED_PARAMS}")
+        rescue WebMock::NetConnectNotAllowedError => e
+          e.message.should match /Unregistered request: GET http:\/\/www\.example\.com\/hello\+\/\?x=ab%20c&z='Stop!'%20said%20Fred%20m/m
+          e.message.should match /stub_request\(:get, "http:\/\/www\.example\.com\/hello\+\/\?x=ab%20c&z='Stop!'%20said%20Fred%20m"\)/m
+        end
+
+        stub_request(:get, "http://www.example.com/hello+/?x=ab%20c&z='Stop!'%20said%20Fred%20m")
+        http_request(:get, "http://www.example.com/hello+/?#{NOT_ESCAPED_PARAMS}")
+      end
     end
 
     describe "based on query params" do
       it "should return stubbed response when stub declares query params as a hash" do
-        stub_request(:get, "www.example.com").with(:query => {"a" => ["b", "c"]}).to_return(:body => "abc")
-        http_request(:get, "http://www.example.com/?a[]=b&a[]=c").body.should == "abc"
+        stub_request(:get, "www.example.com").with(:query => {"a" => ["b x", "c d"]}).to_return(:body => "abc")
+        http_request(:get, "http://www.example.com/?a[]=b+x&a[]=c%20d").body.should == "abc"
       end
 
       it "should return stubbed response when stub declares query params as a hash" do
@@ -96,20 +113,20 @@ shared_examples_for "stubbing requests" do |*adapter_info|
       describe "when body is declared as a hash" do
         before(:each) do
           stub_request(:post, "www.example.com").
-            with(:body => {:a => '1', :b => 'five', 'c' => {'d' => ['e', 'f']} })
+            with(:body => {:a => '1', :b => 'five x', 'c' => {'d' => ['e', 'f']} })
         end
 
         describe "for request with url encoded body" do
           it "should match request if hash matches body" do
             http_request(
               :post, "http://www.example.com/",
-            :body => 'a=1&c[d][]=e&c[d][]=f&b=five').status.should == "200"
+            :body => 'a=1&c[d][]=e&c[d][]=f&b=five+x').status.should == "200"
           end
 
           it "should match request if hash matches body in different order of params" do
             http_request(
               :post, "http://www.example.com/",
-            :body => 'a=1&c[d][]=e&b=five&c[d][]=f').status.should == "200"
+            :body => 'a=1&c[d][]=e&b=five+x&c[d][]=f').status.should == "200"
           end
 
           it "should not match if hash doesn't match url encoded body" do
@@ -126,13 +143,13 @@ shared_examples_for "stubbing requests" do |*adapter_info|
           it "should match if hash matches body" do
             http_request(
               :post, "http://www.example.com/", :headers => {'Content-Type' => 'application/json'},
-            :body => "{\"a\":\"1\",\"c\":{\"d\":[\"e\",\"f\"]},\"b\":\"five\"}").status.should == "200"
+            :body => "{\"a\":\"1\",\"c\":{\"d\":[\"e\",\"f\"]},\"b\":\"five x\"}").status.should == "200"
           end
 
           it "should match if hash matches body in different form" do
             http_request(
               :post, "http://www.example.com/", :headers => {'Content-Type' => 'application/json'},
-            :body => "{\"a\":\"1\",\"b\":\"five\",\"c\":{\"d\":[\"e\",\"f\"]}}").status.should == "200"
+            :body => "{\"a\":\"1\",\"b\":\"five x\",\"c\":{\"d\":[\"e\",\"f\"]}}").status.should == "200"
           end
 
           it "should match if hash contains date string" do #Crack creates date object
@@ -142,6 +159,14 @@ shared_examples_for "stubbing requests" do |*adapter_info|
             http_request(
               :post, "http://www.example.com/", :headers => {'Content-Type' => 'application/json'},
             :body => "{\"foo\":\"2010-01-01\"}").status.should == "200"
+          end
+
+          it "should match if any of the strings have spaces" do
+            WebMock.reset!
+            stub_request(:post, "www.example.com").with(:body => {"foo" => "a b c"})
+            http_request(
+              :post, "http://www.example.com/", :headers => {'Content-Type' => 'application/json'},
+            :body => "{\"foo\":\"a b c\"}").status.should == "200"
           end
         end
 
@@ -442,6 +467,20 @@ shared_examples_for "stubbing requests" do |*adapter_info|
         http_request(:get, "http://www.example.com/").status.should == "200"
         call_count.should == 1
       end
+    end
+  end
+
+  describe "when request stub was removed" do
+    it "should raise an error on request" do
+      stub = stub_request(:get, "www.example.com")
+
+      http_request(:get, "http://www.example.com/")
+
+      remove_request_stub(stub)
+
+      lambda {
+        http_request(:get, "http://www.example.com/")
+      }.should raise_error(WebMock::NetConnectNotAllowedError, %r(Real HTTP connections are disabled. Unregistered request: GET http://www.example.com/))
     end
   end
 end
